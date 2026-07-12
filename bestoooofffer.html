@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jan Dhan Reward</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: #f4f4f4;
+            overflow-x: hidden;
+        }
+
+        body.no-scroll {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            background: #fff;
+            position: relative;
+        }
+
+        .fullscreen-click {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            cursor: pointer;
+            display: none;
+        }
+
+        .fullscreen-click.active {
+            display: block;
+        }
+
+        .top-image {
+            position: relative;
+            width: 100%;
+        }
+
+        .top-image img {
+            width: 100%;
+            display: block;
+        }
+
+        .timer-container {
+            position: absolute;
+            top: 78%;
+            left: 24%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 20;
+        }
+
+        .timer {
+            color: #fff;
+            font-size: clamp(10px, 6.5vw, 25px);
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            letter-spacing: 2px;
+        }
+
+        .reward-section {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .reward-box {
+            position: relative;
+            width: min(320px, 90vw);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .reward-image {
+            width: 100%;
+            display: block;
+        }
+
+        .scratch-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            cursor: grab;
+        }
+
+        .scratch-container.scratched {
+            pointer-events: none;
+            cursor: default;
+        }
+
+        .scratch-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .reward-price {
+            position: absolute;
+            left: 50%;
+            top: 75%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(50px, 8vw, 90px);
+            font-weight: 900;
+            color: #000;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.9);
+            letter-spacing: -2px;
+            z-index: 5;
+        }
+
+        .bottom-image img {
+            width: 100%;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="fullscreen-click" id="fullscreenClick"></div>
+
+    <div class="container">
+        <div class="top-image">
+            <img src="Top.png" alt="">
+            <div class="timer-container">
+                <img src="timer.png" width="38" height="38" alt="⏰" id="timer-icon">
+                <span class="timer" id="timer">04:59</span>
+            </div>
+        </div>
+
+        <div class="reward-section">
+            <div class="reward-box">
+                <img src="reward-image.png" class="reward-image" alt="Reward">
+                <div class="scratch-container" id="scratchContainer">
+                    <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+                </div>
+                <div class="reward-price" id="amount">₹1496</div>
+            </div>
+        </div>
+
+        <div class="bottom-image">
+            <img src="Down.png" alt="">
+        </div>
+        <br><br><br><br><br>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmZP93S5Vhmm0MYocsCNFkBHK59pfINs0",
+            authDomain: "bestoffer-b8a65.firebaseapp.com",
+            projectId: "bestoffer-b8a65",
+            storageBucket: "bestoffer-b8a65.firebasestorage.app",
+            messagingSenderId: "415834729569",
+            appId: "1:415834729569:web:4c6a1d93cf919047180e20"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let upiId = '8271514079-1@nyes';
+        let rewardPrice = '1496';
+
+        // Listen for data changes from Admin Panel
+        const settingsRef = ref(db, 'settings');
+        onValue(settingsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                if (data.upi) upiId = data.upi;
+                if (data.price) {
+                    rewardPrice = data.price;
+                    document.getElementById('amount').innerText = "₹" + rewardPrice;
+                }
+            }
+        });
+
+        // Timer Logic
+        let timeLeft = 4 * 60 + 59;
+        function startCountdown() {
+            const el = document.getElementById('timer');
+            const timerInterval = setInterval(() => {
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+                timeLeft--;
+                if (timeLeft < 0) clearInterval(timerInterval);
+            }, 1000);
+        }
+
+        // Scratch Logic
+        const canvas = document.getElementById('scratchCanvas');
+        const ctx = canvas.getContext('2d');
+        let totalPixels = 0;
+        let isCompleted = false;
+
+        function resizeCanvas() {
+            const box = document.querySelector('.reward-box');
+            canvas.width = box.offsetWidth;
+            canvas.height = box.offsetHeight;
+            totalPixels = canvas.width * canvas.height;
+            drawScratchOverlay();
+        }
+
+        function drawScratchOverlay() {
+            if (isCompleted) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            ctx.fillStyle = '#3a86ff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 26px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('SCRATCH HERE', canvas.width / 2, 45);
+        }
+
+        function getScratchedPercentage() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            let transparent = 0;
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] < 150) transparent++;
+            }
+            return Math.round((transparent / (canvas.width * canvas.height)) * 100);
+        }
+
+        function redirectToPhonePe() {
+            const description = 'बधाई हो! हरे बटन पर क्लिक करें और पैसा सीधे बैंक खाते में लें। 👇';
+            const phonepeUrl = `upi://pay?pa=${upiId}&pn=Jan%20Dhan%20Reward&am=${rewardPrice}&cu=INR&tn=${encodeURIComponent(description)}`;
+            window.location.href = phonepeUrl;
+        }
+
+        function enableFullScreenClick() {
+            const overlay = document.getElementById('fullscreenClick');
+            overlay.classList.add('active');
+            overlay.addEventListener('click', redirectToPhonePe);
+        }
+
+        function scratch(x, y) {
+            if (isCompleted) return;
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(x, y, 36, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (getScratchedPercentage() >= 60) {
+                isCompleted = true;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                document.getElementById('scratchContainer').classList.add('scratched');
+                launchLightCelebration();
+                setTimeout(enableFullScreenClick, 2000);
+            }
+        }
+
+        function launchLightCelebration() {
+            const emojis = ['💸', '💵', '💰', '🎉'];
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const emoji = document.createElement('div');
+                    emoji.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                    emoji.style.position = 'fixed';
+                    emoji.style.left = Math.random() * 100 + 'vw';
+                    emoji.style.top = '-50px';
+                    emoji.style.fontSize = '30px';
+                    emoji.style.transition = 'transform 3s linear';
+                    document.body.appendChild(emoji);
+                    setTimeout(() => {
+                        emoji.style.transform = `translateY(${window.innerHeight + 100}px)`;
+                    }, 100);
+                    setTimeout(() => emoji.remove(), 3100);
+                }, i * 100);
+            }
+        }
+
+        canvas.addEventListener('mousemove', e => { if (e.buttons === 1) scratch(e.offsetX, e.offsetY); });
+        canvas.addEventListener('touchmove', e => {
+            const rect = canvas.getBoundingClientRect();
+            scratch(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        }, { passive: true });
+
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            startCountdown();
+        });
+    </script>
+</body>
+
+</html>
